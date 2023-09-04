@@ -1,0 +1,77 @@
+# Load necessary libraries
+library(shiny)
+
+# UI
+ui <- fluidPage(
+  titlePanel("Research Admin Waste & Opportunity Cost Calculator"),
+  
+  sidebarLayout(
+    sidebarPanel(
+      textInput("description", "Describe the waste", "Inefficient room booking system"),
+      numericInput("time", "Time taken (hours) each year", value = 10, min = 0),
+      numericInput("researchers", "Number of researchers affected per year", value = 100, min = 0),
+      numericInput("costPerHour", "Salary per hour", value = 25, min = 0),
+      radioButtons("currency", "Choose currency:", choices = c("£", "$"), selected = "£"),
+      actionButton("calculate", "Calculate"),
+      selectInput("opportunityCost", "Choose an opportunity cost:", choices = c("Travel Scholarships", "Full-Time Scholarships"), selected = "Travel Scholarships")
+    ),
+    
+    mainPanel(
+      plotOutput("plot"),
+      tags$h4(tags$b(textOutput("wasteDescription"))),
+      textOutput("result"),
+      tags$h4(tags$b("Opportunity Costs:")),
+      textOutput("opportunityResult")
+    )
+  )
+)
+
+# Server
+server <- function(input, output) {
+  observeEvent(input$calculate, {
+    totalCost <- input$time * input$researchers * input$costPerHour
+    yearlyCosts <- totalCost * c(1:10)  # Projections for 10 years
+    
+    output$wasteDescription <- renderText({ paste("Due to: ", input$description) })
+    
+    output$plot <- renderPlot({
+      years <- 1:10
+      barplot(yearlyCosts, names.arg = years, main = "Waste Projection", xlab = "Years", ylab = paste("Waste (", input$currency, ")", sep = ""), border = "blue", col = "lightblue")
+    })
+    
+    output$result <- renderText({
+      paste(
+        input$currency, round(totalCost, 2), " wasted annually.",
+        "Projections:",
+        "Year 1: ", input$currency, round(yearlyCosts[1], 2),
+        "\nYear 5: ", input$currency, round(yearlyCosts[5], 2),
+        "\nYear 10: ", input$currency, round(yearlyCosts[10], 2)
+      )
+    })
+    
+    output$opportunityResult <- renderText({
+      if (input$opportunityCost == "Travel Scholarships") {
+        numScholarships1 <- yearlyCosts[1] / 500  # Year 1 waste
+        numScholarships5 <- yearlyCosts[5] / 500  # Year 5 waste
+        numScholarships10 <- yearlyCosts[10] / 500  # Year 10 waste
+        paste(
+          "Year 1: Could fund ", round(numScholarships1), " travel scholarships.",
+          "\nYear 5: Could fund ", round(numScholarships5), " travel scholarships.",
+          "\nYear 10: Could fund ", round(numScholarships10), " travel scholarships."
+        )
+      } else if (input$opportunityCost == "Full-Time Scholarships") {
+        numScholarships1 <- yearlyCosts[1] / 10000  # Year 1 waste
+        numScholarships5 <- yearlyCosts[5] / 10000  # Year 5 waste
+        numScholarships10 <- yearlyCosts[10] / 10000  # Year 10 waste
+        paste(
+          "Year 1: Could fund ", round(numScholarships1), " full-time scholarships.",
+          "\nYear 5: Could fund ", round(numScholarships5), " full-time scholarships.",
+          "\nYear 10: Could fund ", round(numScholarships10), " full-time scholarships."
+        )
+      }
+    })
+  })
+}
+
+# Run the app
+shinyApp(ui = ui, server = server)
