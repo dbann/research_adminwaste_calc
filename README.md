@@ -1,2 +1,8 @@
 # research_adminwaste_calc
-Calculates the cost of admin waste in research, and highlights opportunity costs. Uses R + the shiny package.
+A simple web app to highlight the cost of admin waste in research.
+
+Shows costs of admin waste at 1, 5, and 10 years. 
+
+Also shows opportunity costs (travel scholarships and full time educaiton scholarships)
+
+ Uses R + the shiny package.
