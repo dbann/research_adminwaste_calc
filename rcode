@@ -10,10 +10,10 @@ ui <- fluidPage(
       textInput("description", "Describe the waste", "Inefficient room booking system"),
       numericInput("time", "Time taken (hours) each year", value = 10, min = 0),
       numericInput("researchers", "Number of researchers affected per year", value = 100, min = 0),
-      numericInput("costPerHour", "Salary per hour", value = 25, min = 0),
+      numericInput("costPerHour", "Salary per hour", value = 30, min = 0),
       radioButtons("currency", "Choose currency:", choices = c("£", "$"), selected = "£"),
       actionButton("calculate", "Calculate"),
-      selectInput("opportunityCost", "Choose an opportunity cost:", choices = c("Travel Scholarships", "Full-Time Scholarships"), selected = "Travel Scholarships")
+      selectInput("opportunityCost", "Choose an opportunity cost:", choices = c("Travel Scholarships (500)", "Full-Time Scholarships (10,000)"), selected = "Travel Scholarships (500)")
     ),
     
     mainPanel(
@@ -26,49 +26,66 @@ ui <- fluidPage(
   )
 )
 
+# Function to calculate outputs
+calculateOutputs <- function(description, time, researchers, costPerHour, currency, opportunityCost) {
+  totalCost <- time * researchers * costPerHour
+  yearlyCosts <- totalCost * c(1:10)  # Projections for 10 years
+  
+  wasteDescription <- paste("Due to: ", description)
+  
+  result <- paste(
+    currency, format(round(totalCost, 0), big.mark = ","), " wasted annually.",
+    "Projections:",
+    "Year 1: ", currency, format(round(yearlyCosts[1], 0), big.mark = ","),
+    "\nYear 5: ", currency, format(round(yearlyCosts[5], 0), big.mark = ","),
+    "\nYear 10: ", currency, format(round(yearlyCosts[10], 0), big.mark = ",")
+  )
+  
+  if (opportunityCost == "Travel Scholarships (500)") {
+    numScholarships1 <- yearlyCosts[1] / 500  # Year 1 waste
+    numScholarships5 <- yearlyCosts[5] / 500  # Year 5 waste
+    numScholarships10 <- yearlyCosts[10] / 500  # Year 10 waste
+    opportunityResult <- paste(
+      "Year 1: Could fund ", format(round(numScholarships1, 0), big.mark = ","), " travel scholarships.",
+      "\nYear 5: Could fund ", format(round(numScholarships5, 0), big.mark = ","), " travel scholarships.",
+      "\nYear 10: Could fund ", format(round(numScholarships10, 0), big.mark = ","), " travel scholarships."
+    )
+  } else {
+    numScholarships1 <- yearlyCosts[1] / 10000  # Year 1 waste
+    numScholarships5 <- yearlyCosts[5] / 10000  # Year 5 waste
+    numScholarships10 <- yearlyCosts[10] / 10000  # Year 10 waste
+    opportunityResult <- paste(
+      "Year 1: Could fund ", format(round(numScholarships1, 0), big.mark = ","), " full-time scholarships.",
+      "\nYear 5: Could fund ", format(round(numScholarships5, 0), big.mark = ","), " full-time scholarships.",
+      "\nYear 10: Could fund ", format(round(numScholarships10, 0), big.mark = ","), " full-time scholarships."
+    )
+  }
+  
+  list(wasteDescription = wasteDescription, result = result, opportunityResult = opportunityResult, yearlyCosts = yearlyCosts)
+}
+
 # Server
 server <- function(input, output) {
+  # Initialize with default values
+  outputs <- calculateOutputs("Inefficient room booking system", 10, 100, 25, "£", "Travel Scholarships (500)")
+  
+  output$wasteDescription <- renderText({ outputs$wasteDescription })
+  output$result <- renderText({ outputs$result })
+  output$opportunityResult <- renderText({ outputs$opportunityResult })
+  output$plot <- renderPlot({
+    years <- 1:10
+    barplot(outputs$yearlyCosts, names.arg = years, main = "Waste Projection", xlab = "Years", ylab = paste("Waste (", input$currency, ")", sep = ""), border = "blue", col = "lightblue")
+  })
+  
   observeEvent(input$calculate, {
-    totalCost <- input$time * input$researchers * input$costPerHour
-    yearlyCosts <- totalCost * c(1:10)  # Projections for 10 years
+    outputs <- calculateOutputs(input$description, input$time, input$researchers, input$costPerHour, input$currency, input$opportunityCost)
     
-    output$wasteDescription <- renderText({ paste("Due to: ", input$description) })
-    
+    output$wasteDescription <- renderText({ outputs$wasteDescription })
+    output$result <- renderText({ outputs$result })
+    output$opportunityResult <- renderText({ outputs$opportunityResult })
     output$plot <- renderPlot({
       years <- 1:10
-      barplot(yearlyCosts, names.arg = years, main = "Waste Projection", xlab = "Years", ylab = paste("Waste (", input$currency, ")", sep = ""), border = "blue", col = "lightblue")
-    })
-    
-    output$result <- renderText({
-      paste(
-        input$currency, round(totalCost, 2), " wasted annually.",
-        "Projections:",
-        "Year 1: ", input$currency, round(yearlyCosts[1], 2),
-        "\nYear 5: ", input$currency, round(yearlyCosts[5], 2),
-        "\nYear 10: ", input$currency, round(yearlyCosts[10], 2)
-      )
-    })
-    
-    output$opportunityResult <- renderText({
-      if (input$opportunityCost == "Travel Scholarships") {
-        numScholarships1 <- yearlyCosts[1] / 500  # Year 1 waste
-        numScholarships5 <- yearlyCosts[5] / 500  # Year 5 waste
-        numScholarships10 <- yearlyCosts[10] / 500  # Year 10 waste
-        paste(
-          "Year 1: Could fund ", round(numScholarships1), " travel scholarships.",
-          "\nYear 5: Could fund ", round(numScholarships5), " travel scholarships.",
-          "\nYear 10: Could fund ", round(numScholarships10), " travel scholarships."
-        )
-      } else if (input$opportunityCost == "Full-Time Scholarships") {
-        numScholarships1 <- yearlyCosts[1] / 10000  # Year 1 waste
-        numScholarships5 <- yearlyCosts[5] / 10000  # Year 5 waste
-        numScholarships10 <- yearlyCosts[10] / 10000  # Year 10 waste
-        paste(
-          "Year 1: Could fund ", round(numScholarships1), " full-time scholarships.",
-          "\nYear 5: Could fund ", round(numScholarships5), " full-time scholarships.",
-          "\nYear 10: Could fund ", round(numScholarships10), " full-time scholarships."
-        )
-      }
+      barplot(outputs$yearlyCosts, names.arg = years, main = "Waste Projection", xlab = "Years", ylab = paste("Waste (", input$currency, ")", sep = ""), border = "blue", col = "lightblue")
     })
   })
 }
