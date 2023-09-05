@@ -3,13 +3,13 @@ library(shiny)
 
 # UI
 ui <- fluidPage(
-  titlePanel("Research Admin Waste & Opportunity Cost Calculator"),
+  titlePanel("Research Admin Waste & Opportunity Cost Calculator (v01)"),
   
   sidebarLayout(
     sidebarPanel(
       textInput("description", "Describe the waste", "Inefficient room booking system"),
       numericInput("time", "Time taken (hours) each year", value = 10, min = 0),
-      numericInput("researchers", "Number of researchers affected per year", value = 100, min = 0),
+      numericInput("researchers", "Number of researchers affected per year", value = 2000, min = 0),
       numericInput("costPerHour", "Salary per hour", value = 30, min = 0),
       radioButtons("currency", "Choose currency:", choices = c("£", "$"), selected = "£"),
       actionButton("calculate", "Calculate"),
@@ -21,7 +21,10 @@ ui <- fluidPage(
       tags$h4(tags$b(textOutput("wasteDescription"))),
       textOutput("result"),
       tags$h4(tags$b("Opportunity Costs:")),
-      textOutput("opportunityResult")
+      textOutput("opportunityResult"),
+            # Add the link to the code at the bottom
+      tags$hr(),  # This adds a horizontal line for separation
+      tags$a(href = "https://github.com/dbann/research_adminwaste_calc", target = "_blank", "Link to code")
     )
   )
 )
@@ -34,11 +37,11 @@ calculateOutputs <- function(description, time, researchers, costPerHour, curren
   wasteDescription <- paste("Due to: ", description)
   
   result <- paste(
-    currency, format(round(totalCost, 0), big.mark = ","), " wasted annually.",
+    currency, format(round(totalCost, 0), big.mark = ",", scientific = FALSE), " wasted annually.",
     "Projections:",
-    "Year 1: ", currency, format(round(yearlyCosts[1], 0), big.mark = ","),
-    "\nYear 5: ", currency, format(round(yearlyCosts[5], 0), big.mark = ","),
-    "\nYear 10: ", currency, format(round(yearlyCosts[10], 0), big.mark = ",")
+    "Year 1: ", currency, format(round(yearlyCosts[1], 0), big.mark = ",", scientific = FALSE),
+    "\nYear 5: ", currency, format(round(yearlyCosts[5], 0), big.mark = ",", scientific = FALSE),
+    "\nYear 10: ", currency, format(round(yearlyCosts[10], 0), big.mark = ",", scientific = FALSE)
   )
   
   if (opportunityCost == "Travel Scholarships (500)") {
@@ -46,9 +49,9 @@ calculateOutputs <- function(description, time, researchers, costPerHour, curren
     numScholarships5 <- yearlyCosts[5] / 500  # Year 5 waste
     numScholarships10 <- yearlyCosts[10] / 500  # Year 10 waste
     opportunityResult <- paste(
-      "Year 1: Could fund ", format(round(numScholarships1, 0), big.mark = ","), " travel scholarships.",
-      "\nYear 5: Could fund ", format(round(numScholarships5, 0), big.mark = ","), " travel scholarships.",
-      "\nYear 10: Could fund ", format(round(numScholarships10, 0), big.mark = ","), " travel scholarships."
+      "Year 1: Could fund ", format(round(numScholarships1, 0), big.mark = ",", scientific = FALSE), " travel scholarships.",
+      "\nYear 5: Could fund ", format(round(numScholarships5, 0), big.mark = ",", scientific = FALSE), " travel scholarships.",
+      "\nYear 10: Could fund ", format(round(numScholarships10, 0), big.mark = ",", scientific = FALSE), " travel scholarships."
     )
   } else {
     numScholarships1 <- yearlyCosts[1] / 10000  # Year 1 waste
@@ -66,16 +69,30 @@ calculateOutputs <- function(description, time, researchers, costPerHour, curren
 
 # Server
 server <- function(input, output) {
-  # Initialize with default values
-  outputs <- calculateOutputs("Inefficient room booking system", 10, 100, 25, "£", "Travel Scholarships (500)")
+  options(scipen = 999)
+    # Initialize with default values
+  outputs <- calculateOutputs("Inefficient room booking system", 10, 2000, 30, "£", "Travel Scholarships (500)")
   
   output$wasteDescription <- renderText({ outputs$wasteDescription })
   output$result <- renderText({ outputs$result })
   output$opportunityResult <- renderText({ outputs$opportunityResult })
+
   output$plot <- renderPlot({
     years <- 1:10
-    barplot(outputs$yearlyCosts, names.arg = years, main = "Waste Projection", xlab = "Years", ylab = paste("Waste (", input$currency, ")", sep = ""), border = "blue", col = "lightblue")
+    
+    # Define custom y-axis ticks
+    y_max <- max(outputs$yearlyCosts) * 1.1
+    y_ticks <- seq(0, y_max, by = y_max / 5)  # Adjust the 'by' value to change the number of ticks
+    
+    midpoints <- barplot(outputs$yearlyCosts, main = "Waste Projection", xlab = "Years", ylab = "", border = "blue", col = "lightblue", ylim = c(0, y_max), axes = FALSE)
+    axis(1, at = midpoints, labels = years)  # x-axis
+    axis(2, las=1, at = y_ticks, labels = formatC(y_ticks, format = "f", big.mark = ",", digits = 0))  # y-axis
+    box()  # Add a box around the plot
   })
+  
+  
+  
+  
   
   observeEvent(input$calculate, {
     outputs <- calculateOutputs(input$description, input$time, input$researchers, input$costPerHour, input$currency, input$opportunityCost)
@@ -91,4 +108,6 @@ server <- function(input, output) {
 }
 
 # Run the app
-shinyApp(ui = ui, server = server)
+#shinyApp(ui = ui, server = server)
+
+shinyApp(ui, server)
