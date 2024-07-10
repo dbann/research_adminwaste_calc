@@ -8,3 +8,5 @@ Shows costs of admin waste at 1, 5, and 10 years.
 Also shows opportunity costs (travel scholarships and full time education scholarships)
 
  Uses R + the shiny package.
+
+![Alt text](example_output.jpg)
